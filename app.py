@@ -21,6 +21,42 @@ st.markdown("""
     p, h1, h2, h3, h4, h5, h6, li, span, div {
         color: black !important;
     }
+    /* 사이드바 헤딩 스타일 */
+    .sidebar-heading {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-top: 1.5rem;
+        margin-bottom: 0.8rem;
+        padding-bottom: 0.2rem;
+        border-bottom: 1px solid #e0e0e0;
+        color: #1E88E5 !important;
+    }
+    /* 버튼 스타일 개선 */
+    .stButton>button {
+        background-color: #f0f2f6;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        transition: all 0.3s;
+    }
+    .stButton>button:hover {
+        background-color: #e0e0e0;
+    }
+    /* 경고 박스 */
+    .warning-box {
+        background-color: #FFF3E0;
+        border-left: 4px solid #FF9800;
+        padding: 10px;
+        border-radius: 4px;
+        margin: 10px 0;
+    }
+    /* 정보 박스 */
+    .info-box {
+        background-color: #E1F5FE;
+        border-left: 4px solid #03A9F4;
+        padding: 10px;
+        border-radius: 4px;
+        margin: 10px 0;
+    }
     /* 설정 버튼(햄버거 메뉴) 숨기기 */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -414,6 +450,19 @@ def initialize_session_state():
             st.session_state.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY or ""
         except:
             st.session_state.PERPLEXITY_API_KEY = ""
+    
+    # 기본 API 키를 api_key 세션에도 설정 (입력 필드용)
+    if "api_key" not in st.session_state:
+        try:
+            st.session_state.api_key = st.session_state.GOOGLE_API_KEY or ""
+        except:
+            st.session_state.api_key = ""
+    
+    if "perplexity_api_key" not in st.session_state:
+        try:
+            st.session_state.perplexity_api_key = st.session_state.PERPLEXITY_API_KEY or ""
+        except:
+            st.session_state.perplexity_api_key = ""
 
 # Perplexity API 연결 테스트 함수
 def test_perplexity_connection(api_key):
@@ -466,16 +515,75 @@ def main():
         
         st.session_state.api_key = st.text_input(
             "Google Gemini API 키", 
-            value=st.session_state.api_key,
+            value=st.session_state.api_key if "api_key" in st.session_state else "",
             type="password"
         )
         
         with st.expander("Perplexity API 설정 (선택사항)"):
             st.session_state.perplexity_api_key = st.text_input(
                 "Perplexity API 키", 
-                value=st.session_state.perplexity_api_key,
+                value=st.session_state.perplexity_api_key if "perplexity_api_key" in st.session_state else "",
                 type="password"
             )
+            
+            # Perplexity API 연결 테스트 버튼
+            if st.button("Perplexity API 연결 테스트"):
+                if not st.session_state.perplexity_api_key:
+                    st.error("Perplexity API 키를 입력해주세요.")
+                else:
+                    with st.spinner("API 연결 테스트 중..."):
+                        success, message = test_perplexity_connection(st.session_state.perplexity_api_key)
+                        if success:
+                            st.session_state.perplexity_connected = True
+                            st.success("Perplexity API 연결 성공!")
+                        else:
+                            st.session_state.perplexity_connected = False
+                            st.session_state.perplexity_error = message
+                            st.error(f"Perplexity API 연결 실패: {message}")
+        
+        # 분석 설정 섹션 추가
+        st.markdown('<div class="sidebar-heading">분석 설정</div>', unsafe_allow_html=True)
+        
+        # 분석 방법 선택
+        analysis_options = ["basic", "hybrid", "comprehensive"]
+        analysis_labels = ["기본 분석", "하이브리드 분석", "종합 분석"]
+        
+        analysis_option_index = analysis_options.index(st.session_state.analysis_option) if st.session_state.analysis_option in analysis_options else 0
+        selected_analysis = st.selectbox(
+            "분석 방법",
+            options=analysis_labels,
+            index=analysis_option_index,
+            help="기본 분석: 표준 분석 수행\n하이브리드 분석: 웹 검색 결과 활용\n종합 분석: 상세한 심층 분석"
+        )
+        
+        # 선택된 라벨을 실제 옵션 값으로 변환
+        st.session_state.analysis_option = analysis_options[analysis_labels.index(selected_analysis)]
+        
+        # 검증 라운드 설정
+        verification_rounds = st.slider(
+            "검증 라운드",
+            min_value=0,
+            max_value=3,
+            value=st.session_state.verification_rounds,
+            help="0: 검증 없음, 1-3: 검증 라운드 횟수 (높을수록 정확도 향상, 처리 시간 증가)"
+        )
+        st.session_state.verification_rounds = verification_rounds
+        
+        # 하이브리드 검색 활성화 (Perplexity API 필요)
+        use_hybrid = st.checkbox(
+            "하이브리드 검색 사용",
+            value=st.session_state.use_hybrid_search,
+            help="웹 검색을 통해 최신 정보를 분석에 활용 (Perplexity API 필요)"
+        )
+        st.session_state.use_hybrid_search = use_hybrid
+        
+        # 전문가 모드 설정
+        expert_mode = st.checkbox(
+            "전문가 모드",
+            value=st.session_state.expert_mode,
+            help="확장된 분석 결과와 상세 정보 제공"
+        )
+        st.session_state.expert_mode = expert_mode
         
         # 실행 환경 정보 (Streamlit Cloud/로컬)
         env_info = "Streamlit Cloud" if "STREAMLIT_SHARING_MODE" in os.environ else "로컬 환경"
