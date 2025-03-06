@@ -1,0 +1,33 @@
+Collecting langchain-google-genai==2.0.11
+  Using cached langchain_google_genai-2.0.11-py3-none-any.whl.metadata (3.6 kB)
+Requirement already satisfied: python-dotenv==1.0.0 in d:\nationial_product\.venv\lib\site-packages (1.0.0)
+Requirement already satisfied: google-generativeai in d:\nationial_product\.venv\lib\site-packages (0.8.4)
+Requirement already satisfied: pywin32==308 in d:\nationial_product\.venv\lib\site-packages (308)
+Requirement already satisfied: filetype<2.0.0,>=1.2.0 in d:\nationial_product\.venv\lib\site-packages (from langchain-google-genai==2.0.11) (1.2.0)
+Collecting google-ai-generativelanguage<0.7.0,>=0.6.16 (from langchain-google-genai==2.0.11)
+  Using cached google_ai_generativelanguage-0.6.16-py3-none-any.whl.metadata (5.7 kB)
+Requirement already satisfied: langchain-core<0.4.0,>=0.3.37 in d:\nationial_product\.venv\lib\site-packages (from langchain-google-genai==2.0.11) (0.3.40)
+Requirement already satisfied: pydantic<3,>=2 in d:\nationial_product\.venv\lib\site-packages (from langchain-google-genai==2.0.11) (2.10.6)
+INFO: pip is looking at multiple versions of google-generativeai to determine which version is compatible with other requirements. This could take a while.
+Collecting google-generativeai
+  Downloading google_generativeai-0.8.3-py3-none-any.whl.metadata (3.9 kB)
+  Downloading google_generativeai-0.8.2-py3-none-any.whl.metadata (3.9 kB)
+  Downloading google_generativeai-0.8.1-py3-none-any.whl.metadata (3.9 kB)
+  Downloading google_generativeai-0.8.0-py3-none-any.whl.metadata (3.9 kB)
+  Downloading google_generativeai-0.7.2-py3-none-any.whl.metadata (4.0 kB)
+  Downloading google_generativeai-0.7.1-py3-none-any.whl.metadata (3.9 kB)
+  Downloading google_generativeai-0.7.0-py3-none-any.whl.metadata (3.9 kB)
+INFO: pip is still looking at multiple versions of google-generativeai to determine which version is compatible with other requirements. This could take a while.
+  Downloading google_generativeai-0.6.0-py3-none-any.whl.metadata (3.9 kB)
+  Downloading google_generativeai-0.5.4-py3-none-any.whl.metadata (3.9 kB)
+  Downloading google_generativeai-0.5.3-py3-none-any.whl.metadata (3.9 kB)
+  Downloading google_generativeai-0.5.2-py3-none-any.whl.metadata (3.9 kB)
+  Downloading google_generativeai-0.5.1-py3-none-any.whl.metadata (3.9 kB)
+INFO: This is taking longer than usual. You might need to provide the dependency resolver with stricter constraints to reduce runtime. See https://pip.pypa.io/warnings/backtracking for guidance. If you want to abort this run, press Ctrl + C.
+  Downloading google_generativeai-0.5.0-py3-none-any.whl.metadata (3.9 kB)
+  Downloading google_generativeai-0.4.1-py3-none-any.whl.metadata (6.2 kB)
+  Using cached google_generativeai-0.4.0-py3-none-any.whl.metadata (6.2 kB)
+  Downloading google_generativeai-0.3.2-py3-none-any.whl.metadata (5.9 kB)
+  Downloading google_generativeai-0.3.1-py3-none-any.whl.metadata (5.9 kB)
+  Downloading google_generativeai-0.3.0-py3-none-any.whl.metadata (5.8 kB)
+  Downloading google_generativeai-0.2.2-py3-none-any.whl.metadata (3.1 kB)

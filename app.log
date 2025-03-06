@@ -1,0 +1,23 @@
+2025-03-04 15:51:57,749 - run - WARNING - 다음 패키지가 설치되어 있지 않습니다: langchain-google-genai, python-dotenv, google-generativeai, pywin32
+2025-03-04 15:55:52,907 - run - ERROR - 패키지 설치 중 오류가 발생했습니다: Command '['D:\\Nationial_product\\.venv\\Scripts\\python.exe', '-m', 'pip', 'install', '-r', 'requirements.txt']' returned non-zero exit status 1.
+2025-03-04 15:56:51,081 - run - WARNING - 다음 패키지가 설치되어 있지 않습니다: langchain-google-genai, python-dotenv, google-generativeai, pywin32
+2025-03-04 15:56:53,834 - run - WARNING - 필요한 패키지가 설치되어 있지 않아 애플리케이션이 제대로 작동하지 않을 수 있습니다.
+2025-03-04 15:56:54,837 - run - INFO - 애플리케이션을 시작합니다...
+2025-03-04 15:59:56,060 - run - WARNING - 다음 패키지가 설치되어 있지 않습니다: langchain-google-genai, python-dotenv, google-generativeai, pywin32
+2025-03-04 16:04:10,396 - run - ERROR - 패키지 설치 중 오류가 발생했습니다: Command '['D:\\Nationial_product\\.venv\\Scripts\\python.exe', '-m', 'pip', 'install', '-r', 'requirements.txt']' returned non-zero exit status 1.
+2025-03-04 16:20:40,297 - run - WARNING - 다음 패키지가 설치되어 있지 않습니다: langchain-google-genai, python-dotenv, google-generativeai, pywin32
+2025-03-04 16:25:01,024 - run - ERROR - 패키지 설치 중 오류가 발생했습니다: Command '['D:\\Nationial_product\\.venv\\Scripts\\python.exe', '-m', 'pip', 'install', '-r', 'requirements.txt']' returned non-zero exit status 1.
+2025-03-04 16:46:45,174 - run - WARNING - 다음 패키지가 설치되어 있지 않습니다: langchain-google-genai, python-dotenv, google-generativeai, pywin32
+2025-03-04 17:00:23,864 - numexpr.utils - INFO - Note: NumExpr detected 16 cores but "NUMEXPR_MAX_THREADS" not set, so enforcing safe limit of 8.
+2025-03-04 17:00:23,864 - numexpr.utils - INFO - NumExpr defaulting to 8 threads.
+2025-03-04 17:00:27,713 - run - WARNING - 다음 패키지가 설치되어 있지 않습니다: langchain-google-genai, python-dotenv, google-generativeai, pywin32
+2025-03-04 17:01:47,035 - run - INFO - 패키지 설치가 완료되었습니다.
+2025-03-04 17:01:48,039 - run - INFO - 애플리케이션을 시작합니다...
+2025-03-05 07:17:45,615 - numexpr.utils - INFO - Note: NumExpr detected 16 cores but "NUMEXPR_MAX_THREADS" not set, so enforcing safe limit of 8.
+2025-03-05 07:17:45,615 - numexpr.utils - INFO - NumExpr defaulting to 8 threads.
+2025-03-05 07:17:49,547 - run - WARNING - 다음 패키지가 설치되어 있지 않습니다: langchain-google-genai, python-dotenv, google-generativeai, pywin32
+2025-03-05 07:18:10,412 - numexpr.utils - INFO - Note: NumExpr detected 16 cores but "NUMEXPR_MAX_THREADS" not set, so enforcing safe limit of 8.
+2025-03-05 07:18:10,412 - numexpr.utils - INFO - NumExpr defaulting to 8 threads.
+2025-03-05 07:18:13,125 - run - WARNING - 다음 패키지가 설치되어 있지 않습니다: langchain-google-genai, python-dotenv, google-generativeai, pywin32
+2025-03-05 07:18:26,080 - run - INFO - 패키지 설치가 완료되었습니다.
+2025-03-05 07:18:27,083 - run - INFO - 애플리케이션을 시작합니다...
