@@ -1,4 +1,13 @@
 import streamlit as st
+
+# Set page configuration - 반드시 다른 Streamlit 명령보다 먼저 실행
+st.set_page_config(
+    page_title="HWP & HWPX 파일 분석기",
+    page_icon="📄",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 import os
 from dotenv import load_dotenv
 from analyzer import ProjectAnalyzer
@@ -77,14 +86,6 @@ def get_api_key(key_name, default_value=None):
 # API 키 설정
 GOOGLE_API_KEY = get_api_key("GOOGLE_API_KEY")
 PERPLEXITY_API_KEY = get_api_key("PERPLEXITY_API_KEY")
-
-# Set page configuration
-st.set_page_config(
-    page_title="HWP & HWPX 파일 분석기",
-    page_icon="📄",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # Custom CSS for better UI
 st.markdown("""

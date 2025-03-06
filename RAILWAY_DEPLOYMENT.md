@@ -115,4 +115,65 @@ API key not found: ...
 
 - [Railway 공식 문서](https://docs.railway.app/)
 - [Railway CLI 사용 방법](https://docs.railway.app/develop/cli)
-- [Railway 가격 정책](https://docs.railway.app/reference/pricing) 
+- [Railway 가격 정책](https://docs.railway.app/reference/pricing)
+
+## Railway 배포 시 secrets.toml 설정
+
+Streamlit 앱은 API 키와 같은 비밀 정보를 `.streamlit/secrets.toml` 파일에 저장합니다. Railway에서 배포할 때는 다음과 같이 이 파일을 처리할 수 있습니다:
+
+### 방법 1: 환경 변수 사용 (권장)
+
+Railway 대시보드에서 환경 변수를 직접 설정합니다:
+
+1. Railway 프로젝트로 이동
+2. Variables 탭 선택
+3. 다음 변수 추가:
+   - `GOOGLE_API_KEY`: Google API 키 값
+   - `PERPLEXITY_API_KEY`: Perplexity API 키 값
+   - `STREAMLIT_SECRETS_PATH`: `/app/.streamlit/secrets.toml`
+
+### 방법 2: secrets.toml 파일 포함하기
+
+1. `.streamlit/secrets.toml` 파일을 생성하고 API 키 입력:
+```toml
+# Streamlit Secrets
+GOOGLE_API_KEY = "your-google-api-key"
+PERPLEXITY_API_KEY = "your-perplexity-api-key"
+```
+
+2. Railway 프로젝트에 이 파일이 포함되도록 합니다.
+
+### 주의사항
+
+* API 키와 같은 중요 정보는 GitHub에 커밋하지 마세요.
+* Railway 환경 변수를 사용하는 것이 가장 안전한 방법입니다.
+* `.gitignore` 파일에 `.streamlit/secrets.toml`을 추가하여 실수로 커밋되지 않도록 합니다. 
+
+## 웹 주소 및 포트폴리오 사용
+
+Railway는 각 배포에 고유한 웹 주소(URL)를 자동으로 제공합니다. 이는 다음과 같이 확인하고 관리할 수 있습니다:
+
+### 기본 도메인 확인하기
+
+1. Railway 대시보드에서 프로젝트를 선택합니다.
+2. "Settings" 탭으로 이동하여 "Domains" 섹션을 확인합니다.
+3. 자동 생성된 도메인(예: `your-app-name.up.railway.app`)을 확인할 수 있습니다.
+
+### 커스텀 도메인 설정하기
+
+포트폴리오용으로 더 전문적인 URL이 필요하다면:
+
+1. "Settings" 탭의 "Domains" 섹션으로 이동합니다. 
+2. "Custom Domain" 옵션을 선택합니다.
+3. 소유한 도메인을 입력하고 DNS 설정을 완료합니다.
+
+### 보안 및 공개 설정
+
+Railway에 배포된 앱은 기본적으로 인터넷에 공개되어 있습니다. 포트폴리오 용도로는 이상적이지만, API 키와 같은 민감한 정보는 환경 변수로 관리해야 합니다.
+
+### 앱 접근 제한
+
+특정 IP만 접근 가능하도록 제한하려면 Railway Pro 플랜으로 업그레이드해야 합니다:
+
+1. Railway Pro로 업그레이드합니다.
+2. "Settings" > "Network" 섹션에서 IP 허용 목록을 설정합니다. 

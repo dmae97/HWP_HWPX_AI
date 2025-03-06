@@ -10,4 +10,11 @@ restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
 
 [env]
-PORT = "8501" 
+PORT = "8501"
+# Streamlit 설정
+STREAMLIT_SERVER_ENABLE_STATIC_SERVING = "true"
+# Streamlit secrets 디렉토리 설정
+STREAMLIT_SECRETS_PATH = "/app/.streamlit/secrets.toml"
+# API 키 설정
+PERPLEXITY_API_KEY = "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"
+GOOGLE_API_KEY = "AIzaSyApsDfrcVt5pJ6Oa5Ipzdr_a1K6NstHVQQ" 
