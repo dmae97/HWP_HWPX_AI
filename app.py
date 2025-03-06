@@ -5,8 +5,28 @@ st.set_page_config(
     page_title="HWP & HWPX 파일 분석기",
     page_icon="📄",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
+    menu_items=None  # 설정 메뉴 숨기기
 )
+
+# 설정 버튼(햄버거 메뉴) 숨기기 및 테마 관련 CSS 설정
+st.markdown("""
+<style>
+    /* 라이트 모드 강제 적용 및 글씨 색상 설정 */
+    .stApp {
+        background-color: white;
+        color: black !important;
+    }
+    /* 모든 텍스트 요소의 색상을 검정색으로 설정 */
+    p, h1, h2, h3, h4, h5, h6, li, span, div {
+        color: black !important;
+    }
+    /* 설정 버튼(햄버거 메뉴) 숨기기 */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+</style>
+""", unsafe_allow_html=True)
 
 import os
 from dotenv import load_dotenv
@@ -378,6 +398,22 @@ def initialize_session_state():
         st.session_state.current_file_index = 0
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
+    # LaTeX 결과 초기화 추가
+    if "latex_results" not in st.session_state:
+        st.session_state.latex_results = {}
+    
+    # API 키 초기화 - 환경변수/secrets 파일에서 가져오기
+    if "GOOGLE_API_KEY" not in st.session_state:
+        try:
+            st.session_state.GOOGLE_API_KEY = GOOGLE_API_KEY or ""
+        except:
+            st.session_state.GOOGLE_API_KEY = ""
+    
+    if "PERPLEXITY_API_KEY" not in st.session_state:
+        try:
+            st.session_state.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY or ""
+        except:
+            st.session_state.PERPLEXITY_API_KEY = ""
 
 # Perplexity API 연결 테스트 함수
 def test_perplexity_connection(api_key):

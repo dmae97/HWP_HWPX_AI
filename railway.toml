@@ -13,6 +13,12 @@ restartPolicyMaxRetries = 3
 PORT = "8501"
 # Streamlit 설정
 STREAMLIT_SERVER_ENABLE_STATIC_SERVING = "true"
+# 테마 관련 설정
+STREAMLIT_THEME_BASE = "light"
+STREAMLIT_THEME_TEXT_COLOR = "#000000"
+STREAMLIT_THEME_BACKGROUND_COLOR = "#FFFFFF"
+# 설정 메뉴 숨기기
+STREAMLIT_UI_HIDE_TOP_BAR = "true"
 # Streamlit secrets 디렉토리 설정
 STREAMLIT_SECRETS_PATH = "/app/.streamlit/secrets.toml"
 # API 키 설정
