@@ -1,4 +1,4 @@
-pyhwpx==0.44.1
+pyhwpx==0.44.1; platform_system=="Windows"
 langchain==0.3.19
 streamlit==1.32.0
 python-dotenv==1.0.0

@@ -2,25 +2,11 @@ import os
 import tempfile
 import logging
 import time
+import platform
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple, BinaryIO
-import pythoncom  # COM 초기화에 필요한 모듈
 import zipfile
 import xml.etree.ElementTree as ET
-
-# COM 초기화 관련 문제를 방지하기 위해 win32com import 방식 수정
-try:
-    # 메인 스레드에서 COM 초기화
-    pythoncom.CoInitialize()
-    import win32com.client
-except Exception as e:
-    logging.error(f"COM 초기화 또는 win32com 가져오기 오류: {str(e)}")
-
-# pyhwpx 임포트
-try:
-    import pyhwpx
-except Exception as e:
-    logging.error(f"pyhwpx 라이브러리 가져오기 오류: {str(e)}")
 
 # 로깅 설정
 logging.basicConfig(
@@ -30,6 +16,33 @@ logging.basicConfig(
     filemode='a'
 )
 logger = logging.getLogger('hwp_utils')
+
+# 플랫폼 확인
+IS_WINDOWS = platform.system() == 'Windows'
+
+# Windows 전용 라이브러리는 조건부로 임포트
+if IS_WINDOWS:
+    try:
+        # 메인 스레드에서 COM 초기화
+        import pythoncom
+        pythoncom.CoInitialize()
+        import win32com.client
+        # pyhwpx 임포트
+        try:
+            import pyhwpx
+            HAS_PYHWPX = True
+        except Exception as e:
+            logger.error(f"pyhwpx 라이브러리 가져오기 오류: {str(e)}")
+            HAS_PYHWPX = False
+        HAS_WIN32COM = True
+    except Exception as e:
+        logger.error(f"COM 초기화 또는 win32com 가져오기 오류: {str(e)}")
+        HAS_WIN32COM = False
+        HAS_PYHWPX = False
+else:
+    logger.info("비 Windows 환경에서 실행 중입니다. Windows 전용 기능은 사용할 수 없습니다.")
+    HAS_WIN32COM = False
+    HAS_PYHWPX = False
 
 # 지원 파일 형식 상수
 SUPPORTED_FORMATS = {
@@ -132,54 +145,96 @@ class HwpHandler:
             추출된 텍스트
             
         참고:
-            이 메서드는 win32com을 사용하여 HWP 텍스트를 추출합니다. 
-            Windows 환경에서만 정상 작동하며, 한글 프로그램이 설치되어 있어야 합니다.
-            대용량 파일(50MB 이상)의 경우 처리 시간이 길어질 수 있습니다.
+            Windows 환경에서는 pyhwpx 또는 win32com을 사용하여 추출을 시도합니다.
+            비Windows 환경에서는 대체 방법으로 제한된 텍스트만 추출할 수 있습니다.
         """
-        # COM 초기화 (스레드별 필요)
-        pythoncom.CoInitialize()
+        # 임시 파일로 저장
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.hwp') as temp_file:
+            temp_file.write(file_obj.read())
+            temp_path = temp_file.name
+        
+        # 파일 포인터 초기화
+        file_obj.seek(0)
+        
+        start_time = time.time()
+        logger.info(f"HWP 텍스트 추출 시작: {getattr(file_obj, 'name', 'unknown.hwp')}")
         
         try:
-            # 임시 파일로 저장
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.hwp') as temp_file:
-                temp_file.write(file_obj.read())
-                temp_path = temp_file.name
-            
-            # 파일 포인터 초기화
-            file_obj.seek(0)
-            
-            # pyhwpx를 사용하여 텍스트 추출
-            try:
-                # 위키독스 참고: pyhwpx.Hwp() 사용
-                hwp = pyhwpx.Hwp()
-                hwp.Open(temp_path)
-                
-                # 텍스트 추출
-                text = hwp.GetTextFile("TEXT", "")
-                
-                # 한글 종료
-                hwp.Quit()
-                
-                # 임시 파일 삭제
-                os.unlink(temp_path)
-                
-                return text
-            except Exception as e:
-                logger.error(f"pyhwpx로 텍스트 추출 중 오류 발생: {str(e)}")
-                
-                # 대체 방법으로 시도
+            if IS_WINDOWS and HAS_PYHWPX:
+                # Windows 환경에서 pyhwpx 사용
                 try:
-                    return HwpHandler._extract_text_alternative(temp_path)
-                except Exception as alt_e:
-                    logger.error(f"win32com으로 텍스트 추출 중 오류 발생: {str(alt_e)}")
+                    # COM 초기화 (스레드별 필요)
+                    pythoncom.CoInitialize()
+                    
+                    # pyhwpx를 사용하여 텍스트 추출
+                    hwp = pyhwpx.Hwp()
+                    hwp.Open(temp_path)
+                    
+                    # 텍스트 추출
+                    text = hwp.GetTextFile("TEXT", "")
+                    
+                    # 한글 종료
+                    hwp.Quit()
+                    
+                    # 임시 파일 삭제
                     os.unlink(temp_path)
-                    raise Exception(f"HWP 파일에서 텍스트를 추출할 수 없습니다: {str(e)}")
+                    
+                    # COM 해제
+                    pythoncom.CoUninitialize()
+                    
+                    logger.info(f"pyhwpx로 텍스트 추출 완료 (소요시간: {time.time() - start_time:.2f}초)")
+                    return text
+                except Exception as e:
+                    logger.error(f"pyhwpx로 텍스트 추출 중 오류 발생: {str(e)}")
+                    
+                    # COM 해제 시도
+                    try:
+                        pythoncom.CoUninitialize()
+                    except:
+                        pass
+                    
+                    # 대체 방법으로 시도
+                    if HAS_WIN32COM:
+                        try:
+                            text = HwpHandler._extract_text_alternative(temp_path)
+                            os.unlink(temp_path)
+                            logger.info(f"win32com으로 텍스트 추출 완료 (소요시간: {time.time() - start_time:.2f}초)")
+                            return text
+                        except Exception as alt_e:
+                            logger.error(f"win32com으로 텍스트 추출 중 오류 발생: {str(alt_e)}")
+            
+            # 비Windows 환경 또는 Windows 메서드 실패 시 대체 방법
+            logger.info("OS 독립적인 방법으로 HWP 텍스트 추출 시도")
+            
+            try:
+                # ZIP 파일로 열어서 텍스트 추출 시도 (일부 HWP 파일은 ZIP 기반)
+                with zipfile.ZipFile(temp_path, 'r') as zip_ref:
+                    text_content = []
+                    for file_path in zip_ref.namelist():
+                        if file_path.endswith('.txt') or file_path.endswith('.xml'):
+                            with zip_ref.open(file_path) as f:
+                                text_content.append(f.read().decode('utf-8', errors='ignore'))
+                    
+                    if text_content:
+                        combined_text = "\n".join(text_content)
+                        logger.info(f"ZIP 기반 방법으로 텍스트 추출 완료 (소요시간: {time.time() - start_time:.2f}초)")
+                        os.unlink(temp_path)
+                        return combined_text
+            except Exception as zip_e:
+                logger.error(f"ZIP 방식으로 텍스트 추출 중 오류 발생: {str(zip_e)}")
+            
+            # 모든 방법이 실패한 경우
+            os.unlink(temp_path)
+            logger.warning(f"HWP 텍스트 추출 실패: 지원되지 않는 환경 또는 파일 형식 (소요시간: {time.time() - start_time:.2f}초)")
+            return "[HWP 텍스트 추출 실패: 이 파일은 Windows 환경에서만 완전히 지원됩니다]"
+            
         except Exception as e:
             logger.error(f"HWP 파일 처리 중 오류 발생: {str(e)}")
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
             return ""
-        finally:
-            # COM 해제
-            pythoncom.CoUninitialize()
     
     @staticmethod
     def _extract_text_hwpx(file_obj: BinaryIO) -> str:
@@ -266,7 +321,14 @@ class HwpHandler:
             
         Returns:
             추출된 텍스트
+            
+        참고:
+            이 메서드는 Windows 환경에서만 사용 가능합니다.
+            한글 프로그램이 설치되어 있어야 정상 작동합니다.
         """
+        if not IS_WINDOWS or not HAS_WIN32COM:
+            raise EnvironmentError("이 메서드는 Windows 환경과 win32com 라이브러리가 필요합니다")
+        
         # 현재 스레드에서 별도 COM 초기화
         pythoncom.CoInitialize()
         
@@ -991,6 +1053,13 @@ class HwpHandler:
             이 메서드는 한글 프로그램이 설치된 Windows 환경에서만 사용 가능합니다.
             COM 인터페이스를 통해 한글 프로그램을 제어하여 이미지를 추출합니다.
         """
+        if not IS_WINDOWS or not HAS_WIN32COM:
+            logger.warning("이 기능은 Windows 환경과 win32com 라이브러리가 필요합니다.")
+            return []
+        
+        start_time = time.time()
+        logger.info(f"win32com으로 이미지 추출 시작: {file_path}")
+        
         pythoncom.CoInitialize()
         images = []
         
@@ -1022,6 +1091,8 @@ class HwpHandler:
             # 한글 종료
             hwp.Quit()
             
+            elapsed_time = time.time() - start_time
+            logger.info(f"win32com으로 이미지 추출 완료: 이미지 수: {len(images)}, 소요 시간: {elapsed_time:.2f}초")
             return images
             
         except Exception as e:

@@ -14,6 +14,7 @@ import logging
 import requests
 import shutil
 import gc
+import platform
 
 # 로깅 설정
 logging.basicConfig(
@@ -56,11 +57,22 @@ load_dotenv()
 # API 키 로딩 - 로컬(.env)과 Streamlit Cloud(st.secrets) 모두 지원
 def get_api_key(key_name, default_value=None):
     """로컬 환경변수 또는 Streamlit secrets에서 API 키를 가져옵니다."""
-    # Streamlit Cloud에서 실행 시 st.secrets에서 로드
-    if key_name in st.secrets:
-        return st.secrets[key_name]
+    # Streamlit Cloud에서 실행 시 st.secrets에서 로드 (try/except 문 사용)
+    try:
+        if key_name in st.secrets:
+            logger.info(f"{key_name} 키를 Streamlit secrets에서 로드했습니다.")
+            return st.secrets[key_name]
+    except Exception as e:
+        logger.warning(f"Streamlit secrets에서 {key_name} 로드 중 오류: {str(e)}")
+    
     # 로컬 환경에서 실행 시 환경변수에서 로드
-    return os.environ.get(key_name, default_value)
+    env_value = os.environ.get(key_name, default_value)
+    if env_value != default_value:
+        logger.info(f"{key_name} 키를 환경변수에서 로드했습니다.")
+    else:
+        logger.warning(f"{key_name} 키를 찾을 수 없습니다.")
+    
+    return env_value
 
 # API 키 설정
 GOOGLE_API_KEY = get_api_key("GOOGLE_API_KEY")
@@ -292,6 +304,23 @@ st.markdown("""
     <p>Gemini API와 Perplexity API를 하이브리드로 활용하여 문서 분석 및 변환 기능을 제공합니다.</p>
 </div>
 """, unsafe_allow_html=True)
+
+# 플랫폼 확인 및 경고 표시
+IS_WINDOWS = platform.system() == 'Windows'
+
+if not IS_WINDOWS:
+    st.warning("""
+    ⚠️ **비Windows 환경 감지됨**
+    
+    이 애플리케이션은 현재 Linux 환경에서 실행 중입니다. HWP/HWPX 파일 처리에 다음과 같은 제한이 있습니다:
+    
+    - 텍스트 추출: 제한적으로 지원 (모든 텍스트를 추출하지 못할 수 있음)
+    - 이미지 추출: 지원되지 않음
+    - 메타데이터 추출: 기본 정보만 제공
+    - 표 추출: 지원되지 않음
+    
+    완전한 기능을 사용하려면 Windows 환경에서 실행하세요.
+    """)
 
 # Initialize session state
 if "api_key" not in st.session_state:
