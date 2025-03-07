@@ -1483,12 +1483,4 @@ def main():
                             logging.error(f"결과 저장 오류: {str(e)}")
 
 if __name__ == "__main__":
-    main() 
-
-
-@app.blob_trigger(arg_name="myblob", path="mycontainer",
-                               connection="AzureWebJobsStorage") 
-def BlobTrigger(myblob: func.InputStream):
-    logging.info(f"Python blob trigger function processed blob"
-                f"Name: {myblob.name}"
-                f"Blob Size: {myblob.length} bytes")
+    main()

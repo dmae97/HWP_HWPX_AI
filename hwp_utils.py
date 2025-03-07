@@ -34,6 +34,25 @@ def detect_platform():
 # 전역 플랫폼 감지 실행
 PLATFORM, FULL_FEATURES = detect_platform()
 
+# Linux 환경에서 pyhwp 라이브러리 임포트 시도
+HAS_PYHWP = False
+if PLATFORM != "windows":
+    try:
+        import olefile
+        import zlib
+        import pyhwp.hwp5.dataio
+        import pyhwp.hwp5.binmodel
+        import pyhwp.hwp5.hwp5odt
+        import pyhwp.hwp5.xmlmodel
+        from pyhwp.hwp5.proc import generate_hwp5html_open_document
+        from pyhwp.hwp5.hwp5odt import Hwp5Odt
+        from pyhwp.hwp5.xmlmodel import Hwp5File
+        HAS_PYHWP = True
+        logger.info("pyhwp 라이브러리 로드 성공 (Linux 환경)")
+    except Exception as e:
+        logger.error(f"pyhwp 라이브러리 로드 실패: {str(e)}")
+        HAS_PYHWP = False
+
 # Windows 전용 라이브러리는 조건부로 임포트
 if PLATFORM == "windows":
     try:
@@ -342,7 +361,7 @@ class HwpHandler:
     @staticmethod
     def _extract_text_alternative(file_path: str) -> str:
         """
-        win32com을 사용하여 HWP/HWPX 파일에서 텍스트를 대체 추출합니다.
+        HWP/HWPX 파일에서 텍스트를 대체 추출합니다.
         
         Args:
             file_path: HWP/HWPX 파일 경로
@@ -351,33 +370,79 @@ class HwpHandler:
             추출된 텍스트
             
         참고:
-            이 메서드는 Windows 환경에서만 사용 가능합니다.
-            한글 프로그램이 설치되어 있어야 정상 작동합니다.
+            Windows 환경에서는 win32com을 사용합니다.
+            Linux 환경에서는 pyhwp 라이브러리를 사용합니다.
         """
-        if not PLATFORM == "windows" or not HAS_WIN32COM:
-            raise EnvironmentError("이 메서드는 Windows 환경과 win32com 라이브러리가 필요합니다")
+        # Windows 환경에서 win32com 사용
+        if PLATFORM == "windows" and HAS_WIN32COM:
+            # 현재 스레드에서 별도 COM 초기화
+            pythoncom.CoInitialize()
+            
+            try:
+                # 한글 애플리케이션 열기
+                hwp = win32com.client.gencache.EnsureDispatch("HWPFrame.HwpObject")
+                hwp.RegisterModule("FilePathCheckDLL", "FilePathCheckerModule")
+                hwp.Open(file_path)
+                
+                # 텍스트 추출
+                text = hwp.GetTextFile("TEXT", "")
+                
+                # 한글 애플리케이션 종료
+                hwp.Quit()
+                
+                return text
+            except Exception as e:
+                logger.error(f"win32com으로 텍스트 추출 중 오류 발생: {str(e)}")
+                raise e
+            finally:
+                # COM 해제
+                pythoncom.CoUninitialize()
         
-        # 현재 스레드에서 별도 COM 초기화
-        pythoncom.CoInitialize()
+        # Linux 환경에서 pyhwp 사용
+        elif HAS_PYHWP:
+            try:
+                logger.info(f"pyhwp로 텍스트 추출 시도: {file_path}")
+                
+                # pyhwp를 사용하여 텍스트 추출
+                with open(file_path, 'rb') as f:
+                    hwp5file = Hwp5File(f)
+                    
+                    # 텍스트 추출 (단순 텍스트)
+                    extracted_text = ""
+                    for paragraph in hwp5file.bodytext.iter_paragraphs():
+                        for t in paragraph.get_text():
+                            extracted_text += t
+                        extracted_text += "\n"
+                    
+                    return extracted_text
+            except Exception as e:
+                logger.error(f"pyhwp로 텍스트 추출 중 오류 발생: {str(e)}")
+                
+                # 기본 olefile 사용 시도
+                try:
+                    logger.info(f"olefile로 텍스트 추출 시도: {file_path}")
+                    
+                    # olefile을 사용하여 기본 텍스트 추출
+                    if olefile.isOleFile(file_path):
+                        ole = olefile.OleFile(file_path)
+                        streams = ole.listdir()
+                        
+                        # 텍스트 스트림 찾기
+                        text_streams = [s for s in streams if 'PrvText' in s[0] or 'Text/Body' in s[0]]
+                        
+                        if text_streams:
+                            text = ""
+                            for stream in text_streams:
+                                with ole.openstream(stream) as s:
+                                    content = s.read().decode('utf-16le', errors='ignore')
+                                    text += content + "\n"
+                            return text
+                except Exception as ole_e:
+                    logger.error(f"olefile로 텍스트 추출 중 오류 발생: {str(ole_e)}")
         
-        try:
-            # 한글 애플리케이션 열기
-            hwp = win32com.client.gencache.EnsureDispatch("HWPFrame.HwpObject")
-            hwp.RegisterModule("FilePathCheckDLL", "FilePathCheckerModule")
-            hwp.Open(file_path)
-            
-            # 텍스트 추출
-            text = hwp.GetTextFile("TEXT", "")
-            
-            # 한글 애플리케이션 종료
-            hwp.Quit()
-            
-            return text
-        except Exception as e:
-            raise e
-        finally:
-            # COM 해제
-            pythoncom.CoUninitialize()
+        # 모든 방법 실패 시
+        logger.warning("모든 텍스트 추출 방법이 실패했습니다.")
+        return "텍스트 추출 실패 (지원되지 않는 환경 또는 파일 형식)"
     
     @staticmethod
     def extract_metadata(file_obj: BinaryIO) -> Dict[str, Any]:

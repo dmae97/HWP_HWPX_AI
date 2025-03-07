@@ -6,6 +6,14 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import logging
 import re
 from datetime import datetime
+import tempfile
+from reportlab.lib.pagesizes import A4, letter
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch, mm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 # 로깅 설정
 logger = logging.getLogger(__name__)
@@ -27,7 +35,27 @@ try:
             pdfmetrics.registerFont(TTFont('Malgun', 'C:/Windows/Fonts/malgun.ttf'))
         # 리눅스 환경
         else:
-            pdfmetrics.registerFont(TTFont('NanumGothic', '/usr/share/fonts/truetype/nanum/NanumGothic.ttf'))
+            # 여러 가능한 경로 시도
+            font_paths = [
+                '/usr/share/fonts/truetype/nanum/NanumGothic.ttf',
+                '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',  # 대체 폰트
+                '/usr/share/fonts/TTF/DejaVuSans.ttf'  # 대체 폰트
+            ]
+            
+            font_registered = False
+            for font_path in font_paths:
+                try:
+                    if os.path.exists(font_path):
+                        pdfmetrics.registerFont(TTFont('NanumGothic', font_path))
+                        font_registered = True
+                        logger.info(f"폰트 등록 성공: {font_path}")
+                        break
+                except Exception as e:
+                    logger.warning(f"폰트 등록 시도 실패 ({font_path}): {str(e)}")
+            
+            # 모든 폰트 등록 시도 실패 시 기본 폰트 사용
+            if not font_registered:
+                logger.warning("모든 폰트 등록 시도 실패. 기본 폰트를 사용합니다.")
         
         PDF_SUPPORT = True
     except Exception as e:
@@ -1372,40 +1400,22 @@ class ProjectAnalyzer:
         return result
 
     def export_to_pdf(self, analysis_result: Dict[str, Any], output_path: str = None) -> str:
-        """
-        분석 결과를 PDF 형식으로 저장합니다.
-        
-        Args:
-            analysis_result: 분석 결과 딕셔너리
-            output_path: PDF 파일을 저장할 경로 (None인 경우 자동 생성)
-            
-        Returns:
-            저장된 PDF 파일 경로
-        """
+        """분석 결과를 PDF로 내보냅니다."""
         if not PDF_SUPPORT:
-            return "PDF 생성 기능을 사용할 수 없습니다. reportlab 라이브러리를 설치하세요."
-            
+            logger.warning("PDF 내보내기가 지원되지 않습니다.")
+            return ""
+        
+        if output_path is None:
+            # 임시 파일 생성
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
+                output_path = temp_file.name
+        
+        # PDF 생성
+        doc = SimpleDocTemplate(output_path, pagesize=letter)
+        styles = getSampleStyleSheet()
+        
+        # 한글 스타일 추가
         try:
-            # 출력 경로가 없는 경우 자동 생성
-            if not output_path:
-                doc_type = analysis_result.get("document_type", "문서")
-                now = datetime.now().strftime("%Y%m%d_%H%M%S")
-                output_path = f"analysis_result_{doc_type}_{now}.pdf"
-            
-            # PDF 문서 생성
-            doc = SimpleDocTemplate(
-                output_path,
-                pagesize=A4,
-                rightMargin=72,
-                leftMargin=72,
-                topMargin=72,
-                bottomMargin=72
-            )
-            
-            # 스타일 설정
-            styles = getSampleStyleSheet()
-            
-            # 한글 지원 스타일 추가
             if os.name == 'nt':  # 윈도우
                 styles.add(ParagraphStyle(
                     name='Korean',
@@ -1428,92 +1438,114 @@ class ProjectAnalyzer:
                     spaceAfter=10
                 ))
             else:  # 리눅스
+                # 폰트가 등록되었는지 확인
+                korean_font = 'NanumGothic' if 'NanumGothic' in pdfmetrics.getRegisteredFontNames() else 'Helvetica'
+                
                 styles.add(ParagraphStyle(
                     name='Korean',
-                    fontName='NanumGothic',
+                    fontName=korean_font,
                     fontSize=10,
                     leading=12
                 ))
                 styles.add(ParagraphStyle(
                     name='KoreanTitle',
-                    fontName='NanumGothic',
+                    fontName=korean_font,
                     fontSize=16,
                     leading=20,
                     alignment=1  # 중앙 정렬
                 ))
                 styles.add(ParagraphStyle(
                     name='KoreanHeading',
-                    fontName='NanumGothic',
+                    fontName=korean_font,
                     fontSize=14,
                     leading=16,
                     spaceAfter=10
                 ))
-                
-            # PDF에 들어갈 요소 목록
-            elements = []
-            
-            # 제목 추가
-            doc_type = analysis_result.get("document_type", "문서")
-            title = f"{doc_type} 분석 보고서"
-            elements.append(Paragraph(title, styles["KoreanTitle"]))
-            elements.append(Spacer(1, 12))
-            
-            # 분석 날짜 추가
-            now = datetime.now().strftime("%Y년 %m월 %d일")
-            elements.append(Paragraph(f"분석 일자: {now}", styles["Korean"]))
-            elements.append(Spacer(1, 24))
-            
-            # 문서 유형 정보
-            elements.append(Paragraph("문서 유형: " + doc_type, styles["Korean"]))
-            elements.append(Spacer(1, 12))
-            
-            # 요약 섹션
-            elements.append(Paragraph("요약", styles["KoreanHeading"]))
-            summary = analysis_result.get('summary', "요약을 찾을 수 없습니다.")
-            elements.append(Paragraph(summary, styles["Korean"]))
-            elements.append(Spacer(1, 12))
-            
-            # 상세 분석 섹션
-            elements.append(Paragraph("상세 분석", styles["KoreanHeading"]))
-            analysis = analysis_result.get('analysis', "분석 결과를 찾을 수 없습니다.")
-            # 마크다운 형식의 볼드체 처리
-            analysis = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', analysis)
-            analysis = re.sub(r'\*(.*?)\*', r'<i>\1</i>', analysis)
-            
-            # 단락 나누기
-            paragraphs = analysis.split('\n\n')
-            for para in paragraphs:
-                if para.strip():
-                    elements.append(Paragraph(para, styles["Korean"]))
-                    elements.append(Spacer(1, 6))
-            
-            elements.append(Spacer(1, 12))
-            
-            # 권장사항 섹션
-            elements.append(Paragraph("권장사항", styles["KoreanHeading"]))
-            recommendations = analysis_result.get('recommendations', "권장사항을 찾을 수 없습니다.")
-            recommendations = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', recommendations)
-            
-            # 단락 나누기
-            rec_paragraphs = recommendations.split('\n\n')
-            for para in rec_paragraphs:
-                if para.strip():
-                    elements.append(Paragraph(para, styles["Korean"]))
-                    elements.append(Spacer(1, 6))
-            
-            # 평가 정보 (있는 경우)
-            if "evaluation" in analysis_result:
-                elements.append(Spacer(1, 12))
-                elements.append(Paragraph("평가", styles["KoreanHeading"]))
-                evaluation = analysis_result.get("evaluation", "평가 정보를 찾을 수 없습니다.")
-                elements.append(Paragraph(evaluation, styles["Korean"]))
-            
-            # PDF 생성
-            doc.build(elements)
-            
-            logger.info(f"PDF 보고서가 생성되었습니다: {output_path}")
-            return output_path
-            
         except Exception as e:
-            logger.error(f"PDF 생성 중 오류 발생: {str(e)}")
-            return f"PDF 생성 실패: {str(e)}"
+            logger.warning(f"한글 스타일 추가 실패: {str(e)}. 기본 스타일을 사용합니다.")
+            # 기본 스타일 사용
+            styles.add(ParagraphStyle(
+                name='Korean',
+                fontName='Helvetica',
+                fontSize=10,
+                leading=12
+            ))
+            styles.add(ParagraphStyle(
+                name='KoreanTitle',
+                fontName='Helvetica-Bold',
+                fontSize=16,
+                leading=20,
+                alignment=1  # 중앙 정렬
+            ))
+            styles.add(ParagraphStyle(
+                name='KoreanHeading',
+                fontName='Helvetica-Bold',
+                fontSize=14,
+                leading=16,
+                spaceAfter=10
+            ))
+
+        # PDF에 들어갈 요소 목록
+        elements = []
+        
+        # 제목 추가
+        doc_type = analysis_result.get("document_type", "문서")
+        title = f"{doc_type} 분석 보고서"
+        elements.append(Paragraph(title, styles["KoreanTitle"]))
+        elements.append(Spacer(1, 12))
+        
+        # 분석 날짜 추가
+        now = datetime.now().strftime("%Y년 %m월 %d일")
+        elements.append(Paragraph(f"분석 일자: {now}", styles["Korean"]))
+        elements.append(Spacer(1, 24))
+        
+        # 문서 유형 정보
+        elements.append(Paragraph("문서 유형: " + doc_type, styles["Korean"]))
+        elements.append(Spacer(1, 12))
+        
+        # 요약 섹션
+        elements.append(Paragraph("요약", styles["KoreanHeading"]))
+        summary = analysis_result.get('summary', "요약을 찾을 수 없습니다.")
+        elements.append(Paragraph(summary, styles["Korean"]))
+        elements.append(Spacer(1, 12))
+        
+        # 상세 분석 섹션
+        elements.append(Paragraph("상세 분석", styles["KoreanHeading"]))
+        analysis = analysis_result.get('analysis', "분석 결과를 찾을 수 없습니다.")
+        # 마크다운 형식의 볼드체 처리
+        analysis = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', analysis)
+        analysis = re.sub(r'\*(.*?)\*', r'<i>\1</i>', analysis)
+        
+        # 단락 나누기
+        paragraphs = analysis.split('\n\n')
+        for para in paragraphs:
+            if para.strip():
+                elements.append(Paragraph(para, styles["Korean"]))
+                elements.append(Spacer(1, 6))
+        
+        elements.append(Spacer(1, 12))
+        
+        # 권장사항 섹션
+        elements.append(Paragraph("권장사항", styles["KoreanHeading"]))
+        recommendations = analysis_result.get('recommendations', "권장사항을 찾을 수 없습니다.")
+        recommendations = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', recommendations)
+        
+        # 단락 나누기
+        rec_paragraphs = recommendations.split('\n\n')
+        for para in rec_paragraphs:
+            if para.strip():
+                elements.append(Paragraph(para, styles["Korean"]))
+                elements.append(Spacer(1, 6))
+        
+        # 평가 정보 (있는 경우)
+        if "evaluation" in analysis_result:
+            elements.append(Spacer(1, 12))
+            elements.append(Paragraph("평가", styles["KoreanHeading"]))
+            evaluation = analysis_result.get("evaluation", "평가 정보를 찾을 수 없습니다.")
+            elements.append(Paragraph(evaluation, styles["Korean"]))
+        
+        # PDF 생성
+        doc.build(elements)
+        
+        logger.info(f"PDF 보고서가 생성되었습니다: {output_path}")
+        return output_path
