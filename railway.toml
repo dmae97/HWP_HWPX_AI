@@ -18,4 +18,8 @@ STREAMLIT_THEME_BACKGROUND_COLOR = "#FFFFFF"
 STREAMLIT_UI_HIDE_TOP_BAR = "true"
 STREAMLIT_SECRETS_PATH = "/app/.streamlit/secrets.toml"
 PERPLEXITY_API_KEY = "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"
-GOOGLE_API_KEY = "AIzaSyApsDfrcVt5pJ6Oa5Ipzdr_a1K6NstHVQQ" 
+GOOGLE_API_KEY = "AIzaSyApsDfrcVt5pJ6Oa5Ipzdr_a1K6NstHVQQ"
+# 플랫폼 설정
+PLATFORM = "linux"
+# HWP 관련 기능 제한 알림
+HWP_FEATURE_LIMITED = "true" 

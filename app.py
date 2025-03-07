@@ -15,52 +15,334 @@ st.markdown("""
     /* 라이트 모드 강제 적용 및 글씨 색상 설정 */
     .stApp {
         background-color: white;
-        color: black !important;
+        color: #212121 !important;
+        font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     }
-    /* 모든 텍스트 요소의 색상을 검정색으로 설정 */
-    p, h1, h2, h3, h4, h5, h6, li, span, div {
-        color: black !important;
+    
+    /* 기본 텍스트 가독성 향상 */
+    p, li, span, div {
+        color: #212121 !important;
+        line-height: 1.6;
+        font-size: 1rem;
+        letter-spacing: 0.01em;
     }
+    
+    /* 제목 스타일 개선 */
+    h1 {
+        color: #1565C0 !important;
+        font-weight: 700;
+        font-size: 2.2rem;
+        margin-bottom: 1rem;
+        letter-spacing: -0.01em;
+    }
+    
+    h2 {
+        color: #1976D2 !important;
+        font-weight: 600;
+        font-size: 1.8rem;
+        margin-top: 1.5rem;
+        margin-bottom: 0.8rem;
+        letter-spacing: -0.01em;
+    }
+    
+    h3 {
+        color: #1E88E5 !important;
+        font-weight: 600;
+        font-size: 1.5rem;
+        margin-top: 1.2rem;
+        margin-bottom: 0.6rem;
+    }
+    
+    h4, h5, h6 {
+        color: #2196F3 !important;
+        font-weight: 600;
+    }
+    
     /* 사이드바 헤딩 스타일 */
     .sidebar-heading {
         font-size: 1.2rem;
         font-weight: 600;
-        margin-top: 1.5rem;
-        margin-bottom: 0.8rem;
-        padding-bottom: 0.2rem;
+        margin-top: 1.8rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.3rem;
         border-bottom: 1px solid #e0e0e0;
-        color: #1E88E5 !important;
+        color: #1565C0 !important;
+        letter-spacing: -0.01em;
     }
+    
     /* 버튼 스타일 개선 */
     .stButton>button {
         background-color: #f0f2f6;
         border: 1px solid #e0e0e0;
         border-radius: 4px;
         transition: all 0.3s;
+        font-weight: 500;
+        padding: 0.5rem 1rem;
     }
+    
     .stButton>button:hover {
         background-color: #e0e0e0;
+        border-color: #bdbdbd;
     }
+    
     /* 경고 박스 */
     .warning-box {
-        background-color: #FFF3E0;
-        border-left: 4px solid #FF9800;
-        padding: 10px;
+        background-color: #FFF8E1;
+        border-left: 4px solid #FFA000;
+        padding: 12px 16px;
         border-radius: 4px;
-        margin: 10px 0;
+        margin: 16px 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
+    
     /* 정보 박스 */
     .info-box {
-        background-color: #E1F5FE;
-        border-left: 4px solid #03A9F4;
-        padding: 10px;
+        background-color: #E3F2FD;
+        border-left: 4px solid #2196F3;
+        padding: 12px 16px;
         border-radius: 4px;
-        margin: 10px 0;
+        margin: 16px 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
+    
+    /* 성공 박스 */
+    .success-box {
+        background-color: #E8F5E9;
+        border-left: 4px solid #4CAF50;
+        padding: 12px 16px;
+        border-radius: 4px;
+        margin: 16px 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
     /* 설정 버튼(햄버거 메뉴) 숨기기 */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
+    
+    /* 입력 필드 스타일 개선 */
+    .stTextInput>div>div>input {
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
+        padding: 10px 14px;
+        font-size: 1rem;
+        transition: all 0.2s;
+    }
+    
+    .stTextInput>div>div>input:focus {
+        border-color: #1976D2;
+        box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+    }
+    
+    /* 사이드바 전체 스타일 */
+    section[data-testid="stSidebar"] {
+        background-color: #f8f9fa;
+        border-right: 1px solid #e0e0e0;
+        padding: 1.5rem 1rem;
+    }
+    
+    /* 사이드바 내부 요소 간격 조정 */
+    section[data-testid="stSidebar"] > div > div > div > div > div {
+        margin-bottom: 1.2rem;
+    }
+    
+    /* 데이터프레임 스타일 개선 */
+    .stDataFrame {
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    .stDataFrame th {
+        background-color: #f5f7fa;
+        color: #424242 !important;
+        font-weight: 600;
+        padding: 8px 12px !important;
+    }
+    
+    .stDataFrame td {
+        padding: 8px 12px !important;
+        border-top: 1px solid #f0f0f0;
+        color: #212121 !important;
+    }
+    
+    /* 탭 스타일 개선 */
+    button[data-baseweb="tab"] {
+        font-weight: 500;
+        padding: 8px 16px;
+        margin-right: 4px;
+    }
+    
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: #1565C0 !important;
+        border-bottom-color: #1565C0 !important;
+        font-weight: 600;
+    }
+    
+    /* 파일 업로더 스타일 */
+    .stFileUploader > div > button {
+        background-color: #1976D2;
+        color: white !important;
+        font-weight: 500;
+        padding: 8px 16px;
+        border-radius: 4px;
+        transition: all 0.3s;
+    }
+    
+    .stFileUploader > div > button:hover {
+        background-color: #1565C0;
+    }
+    
+    /* 선택 위젯 스타일 개선 */
+    .stSelectbox label, .stMultiselect label {
+        color: #424242 !important;
+        font-weight: 500;
+        margin-bottom: 4px;
+    }
+    
+    /* 체크박스 스타일 개선 */
+    .stCheckbox label {
+        color: #424242 !important;
+        font-weight: 400;
+    }
+    
+    /* 슬라이더 스타일 개선 */
+    .stSlider label {
+        color: #424242 !important;
+        font-weight: 500;
+        margin-bottom: 4px;
+    }
+    
+    /* 코드 블록 가독성 향상 */
+    pre {
+        background-color: #f5f7fa;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        padding: 12px 16px;
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        overflow-x: auto;
+    }
+    
+    code {
+        background-color: #f5f7fa;
+        border-radius: 3px;
+        padding: 2px 4px;
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        font-size: 0.9em;
+        color: #0D47A1 !important;
+    }
+    
+    /* 텍스트 영역 스타일 개선 */
+    .stTextArea textarea {
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
+        padding: 10px 14px;
+        font-size: 1rem;
+        line-height: 1.6;
+    }
+    
+    /* 구분선 스타일 */
+    hr {
+        border: none;
+        height: 1px;
+        background-color: #e0e0e0;
+        margin: 2rem 0;
+    }
+    
+    /* 링크 스타일 */
+    a {
+        color: #1976D2 !important;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    
+    a:hover {
+        color: #1565C0 !important;
+        text-decoration: underline;
+    }
+    
+    /* 메인 컨텐츠 영역 여백 조정 */
+    .main .block-container {
+        padding: 2rem 1.5rem;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    /* 메트릭 스타일 개선 */
+    .stMetric label {
+        color: #616161 !important;
+        font-weight: 500;
+    }
+    
+    .stMetric .metric-value {
+        font-weight: 600;
+        color: #1976D2 !important;
+    }
+    
+    /* 가독성 향상을 위한 추가 설정 */
+    .main p {
+        font-size: 1rem;
+        line-height: 1.7;
+        margin-bottom: 1rem;
+    }
+    
+    /* 텍스트 선택 시 스타일 */
+    ::selection {
+        background-color: rgba(25, 118, 210, 0.2);
+        color: #1565C0;
+    }
+    
+    /* 스크롤바 스타일 개선 */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #a1a1a1;
+    }
+    
+    /* 텍스트 에어리어 가독성 향상 */
+    .stTextArea textarea {
+        font-size: 1rem !important;
+        line-height: 1.6 !important;
+        padding: 12px !important;
+    }
+    
+    /* 파일 업로더 영역 개선 */
+    .stFileUploader {
+        border: 1px dashed #1976D2;
+        border-radius: 8px;
+        padding: 10px;
+        background-color: rgba(25, 118, 210, 0.05);
+    }
+    
+    /* 데이터프레임 헤더 고정 */
+    .stDataFrame thead tr th {
+        position: sticky;
+        top: 0;
+        background-color: #f5f7fa;
+        z-index: 1;
+    }
+    
+    /* 폰트 렌더링 최적화 */
+    * {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -121,7 +403,13 @@ load_dotenv()
 
 # API 키 로딩 - 로컬(.env)과 Streamlit Cloud(st.secrets) 모두 지원
 def get_api_key(key_name, default_value=None):
-    """로컬 환경변수 또는 Streamlit secrets에서 API 키를 가져옵니다."""
+    """Railway 환경변수 또는 Streamlit secrets에서 API 키를 가져옵니다."""
+    # Railway 환경변수에서 로드
+    env_value = os.environ.get(key_name)
+    if env_value:
+        logger.info(f"{key_name} 키를 Railway 환경변수에서 로드했습니다.")
+        return env_value
+
     # Streamlit Cloud에서 실행 시 st.secrets에서 로드 (try/except 문 사용)
     try:
         if key_name in st.secrets:
@@ -129,15 +417,9 @@ def get_api_key(key_name, default_value=None):
             return st.secrets[key_name]
     except Exception as e:
         logger.warning(f"Streamlit secrets에서 {key_name} 로드 중 오류: {str(e)}")
-    
-    # 로컬 환경에서 실행 시 환경변수에서 로드
-    env_value = os.environ.get(key_name, default_value)
-    if env_value != default_value:
-        logger.info(f"{key_name} 키를 환경변수에서 로드했습니다.")
-    else:
-        logger.warning(f"{key_name} 키를 찾을 수 없습니다.")
-    
-    return env_value
+
+    logger.warning(f"{key_name} 키를 찾을 수 없습니다.")
+    return default_value
 
 # API 키 설정
 GOOGLE_API_KEY = get_api_key("GOOGLE_API_KEY")
@@ -507,11 +789,78 @@ def test_perplexity_connection(api_key):
 
 # Main app logic
 def main():
+    # 플랫폼 감지 및 설정
+    is_windows = platform.system() == "Windows"
+    is_railway = os.environ.get("RAILWAY_STATIC_URL") is not None
+    
+    # 환경 정보 설정
+    if is_railway:
+        platform_env = "Railway (Linux)"
+        platform_features_limited = True
+    elif not is_windows:
+        platform_env = f"{platform.system()} (기능 제한)"
+        platform_features_limited = True
+    else:
+        platform_env = "Windows (모든 기능 지원)"
+        platform_features_limited = False
+    
     # Sidebar configuration
     with st.sidebar:
         st.title("HWP & HWPX 파일 분석기")
         
+        # 환경 정보 알림 (중요!)
+        if platform_features_limited:
+            st.markdown(f"""
+            <div class="warning-box">
+            ⚠️ <b>플랫폼 제한 안내</b><br>
+            현재 <b>{platform_env}</b> 환경에서 실행 중입니다.<br>
+            일부 HWP 문서 처리 기능(이미지 추출, 표 추출 등)이 제한됩니다.
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="info-box">
+            ✅ <b>최적 환경</b><br>
+            현재 <b>{platform_env}</b> 환경에서 실행 중입니다.<br>
+            모든 HWP 문서 처리 기능이 지원됩니다.
+            </div>
+            """, unsafe_allow_html=True)
+        
         st.markdown('<div class="sidebar-heading">API 키 설정</div>', unsafe_allow_html=True)
+        
+        # API 키 자동 로드 확인
+        api_key_loaded = False
+        perplexity_key_loaded = False
+        
+        # 환경 변수에서 API 키 확인
+        if os.environ.get("GOOGLE_API_KEY"):
+            api_key_loaded = True
+            
+        if os.environ.get("PERPLEXITY_API_KEY"):
+            perplexity_key_loaded = True
+        
+        # API 키 자동 로드 알림
+        if api_key_loaded and perplexity_key_loaded:
+            st.markdown("""
+            <div class="success-box">
+            ✅ <b>API 키 자동 로드 완료</b><br>
+            Google Gemini API 키와 Perplexity API 키가 환경 변수에서 자동으로 로드되었습니다.
+            </div>
+            """, unsafe_allow_html=True)
+        elif api_key_loaded:
+            st.markdown("""
+            <div class="success-box">
+            ✅ <b>Gemini API 키 자동 로드 완료</b><br>
+            Google Gemini API 키가 환경 변수에서 자동으로 로드되었습니다.
+            </div>
+            """, unsafe_allow_html=True)
+        elif perplexity_key_loaded:
+            st.markdown("""
+            <div class="success-box">
+            ✅ <b>Perplexity API 키 자동 로드 완료</b><br>
+            Perplexity API 키가 환경 변수에서 자동으로 로드되었습니다.
+            </div>
+            """, unsafe_allow_html=True)
         
         st.session_state.api_key = st.text_input(
             "Google Gemini API 키", 

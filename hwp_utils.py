@@ -17,11 +17,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger('hwp_utils')
 
-# 플랫폼 확인
-IS_WINDOWS = platform.system() == 'Windows'
+# 플랫폼 감지 로직 추가
+def detect_platform():
+    """플랫폼 및 환경 감지 함수"""
+    is_windows = platform.system() == "Windows"
+    is_railway = os.environ.get("RAILWAY_STATIC_URL") is not None
+    
+    # 환경 정보 리턴
+    if is_railway:
+        return "railway", False  # Railway (Linux) 환경, 기능 제한 있음
+    elif not is_windows:
+        return platform.system().lower(), False  # 다른 비-Windows 환경, 기능 제한 있음
+    else:
+        return "windows", True  # Windows 환경, 모든 기능 지원
+        
+# 전역 플랫폼 감지 실행
+PLATFORM, FULL_FEATURES = detect_platform()
 
 # Windows 전용 라이브러리는 조건부로 임포트
-if IS_WINDOWS:
+if PLATFORM == "windows":
     try:
         # 메인 스레드에서 COM 초기화
         import pythoncom
@@ -102,36 +116,50 @@ class HwpHandler:
         HWP 또는 HWPX 파일에서 텍스트를 추출합니다.
         
         Args:
-            file_obj: HWP/HWPX 파일 객체
+            file_obj: 이진 파일 객체
             
         Returns:
-            추출된 텍스트
-            
-        참고:
-            - 매우 큰 파일의 경우 처리 시간이 길어질 수 있습니다.
-            - 특수 서식이나 복잡한 구조를 가진 문서의 텍스트 추출 시 일부 누락될 수 있습니다.
+            str: 추출된 텍스트
         """
-        start_time = time.time()
-        
-        # 파일 확장자 확인
-        filename = getattr(file_obj, 'name', '')
-        is_hwpx = filename.lower().endswith('.hwpx')
-        
-        logger.info(f"텍스트 추출 시작: {filename}, 파일 형식: {'HWPX' if is_hwpx else 'HWP'}")
-        
         try:
-            if is_hwpx:
-                result = HwpHandler._extract_text_hwpx(file_obj)
-            else:
-                result = HwpHandler._extract_text_hwp(file_obj)
+            # 임시 파일로 저장
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.hwp') as temp_file:
+                temp_file.write(file_obj.read())
+                temp_path = temp_file.name
+            
+            file_obj.seek(0)  # 파일 포인터 초기화
+            
+            # 파일 타입 확인 (HWP vs HWPX)
+            is_hwpx = file_obj.read(4) == b'PK\x03\x04'
+            file_obj.seek(0)  # 파일 포인터 초기화
+            
+            extracted_text = ""
+            try:
+                # 플랫폼에 따른 추출 방법 선택
+                if is_hwpx:
+                    extracted_text = HwpHandler._extract_text_hwpx(file_obj)
+                else:
+                    if FULL_FEATURES:
+                        extracted_text = HwpHandler._extract_text_hwp(file_obj)
+                    else:
+                        # 비-Windows 환경에서 대체 방법 시도
+                        extracted_text = HwpHandler._extract_text_alternative(temp_path)
+            except Exception as e:
+                logging.error(f"텍스트 추출 오류: {str(e)}")
+                # 대체 방법 시도
+                extracted_text = HwpHandler._extract_text_alternative(temp_path)
                 
-            elapsed_time = time.time() - start_time
-            logger.info(f"텍스트 추출 완료: {filename}, 추출 크기: {len(result)} 자, 소요 시간: {elapsed_time:.2f}초")
-            return result
+            # 임시 파일 삭제
+            try:
+                os.unlink(temp_path)
+            except:
+                pass
+                
+            return extracted_text or "텍스트 추출 실패"
+        
         except Exception as e:
-            elapsed_time = time.time() - start_time
-            logger.error(f"텍스트 추출 실패: {filename}, 오류: {str(e)}, 경과 시간: {elapsed_time:.2f}초")
-            return f"텍스트 추출 중 오류 발생: {str(e)}"
+            logging.error(f"HWP 파일 처리 중 오류 발생: {str(e)}")
+            return f"HWP 파일 처리 오류: {str(e)}"
     
     @staticmethod
     def _extract_text_hwp(file_obj: BinaryIO) -> str:
@@ -160,7 +188,7 @@ class HwpHandler:
         logger.info(f"HWP 텍스트 추출 시작: {getattr(file_obj, 'name', 'unknown.hwp')}")
         
         try:
-            if IS_WINDOWS and HAS_PYHWPX:
+            if PLATFORM == "windows" and HAS_PYHWPX:
                 # Windows 환경에서 pyhwpx 사용
                 try:
                     # COM 초기화 (스레드별 필요)
@@ -326,7 +354,7 @@ class HwpHandler:
             이 메서드는 Windows 환경에서만 사용 가능합니다.
             한글 프로그램이 설치되어 있어야 정상 작동합니다.
         """
-        if not IS_WINDOWS or not HAS_WIN32COM:
+        if not PLATFORM == "windows" or not HAS_WIN32COM:
             raise EnvironmentError("이 메서드는 Windows 환경과 win32com 라이브러리가 필요합니다")
         
         # 현재 스레드에서 별도 COM 초기화
@@ -1053,7 +1081,7 @@ class HwpHandler:
             이 메서드는 한글 프로그램이 설치된 Windows 환경에서만 사용 가능합니다.
             COM 인터페이스를 통해 한글 프로그램을 제어하여 이미지를 추출합니다.
         """
-        if not IS_WINDOWS or not HAS_WIN32COM:
+        if not PLATFORM == "windows" or not HAS_WIN32COM:
             logger.warning("이 기능은 Windows 환경과 win32com 라이브러리가 필요합니다.")
             return []
         
