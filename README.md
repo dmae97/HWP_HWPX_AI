@@ -179,4 +179,28 @@ HWP & HWPX 파일 분석기는 한글(HWP) 및 한글 XML(HWPX) 파일을 분석
 
 ## 연락처
 
-문의사항이나 버그 리포트는 [ingeng2004@gmail.com](mailto:ingeng2004@gmail.com)으로 보내주세요. 
+문의사항이나 버그 리포트는 [ingeng2004@gmail.com](mailto:ingeng2004@gmail.com)으로 보내주세요.
+
+## Streamlit Cloud 배포 가이드
+
+이 프로젝트는 Streamlit Cloud에 최적화되어 있습니다. 다음 단계를 따라 배포하세요:
+
+1. [Streamlit Cloud](https://streamlit.io/cloud)에 가입하고 로그인합니다.
+2. "New app" 버튼을 클릭합니다.
+3. GitHub 저장소를 연결하고 이 프로젝트의 저장소를 선택합니다.
+4. 메인 파일 경로로 `app.py`를 지정합니다.
+5. 고급 설정에서 Python 버전을 3.9 이상으로 설정합니다.
+6. Secrets 섹션에서 다음 내용을 추가합니다:
+   ```
+   PERPLEXITY_API_KEY = "your-perplexity-api-key"
+   GOOGLE_API_KEY = "your-google-api-key"
+   PLATFORM = "linux"
+   HWP_FEATURE_LIMITED = "true"
+   ```
+7. "Deploy!" 버튼을 클릭하여 배포를 시작합니다.
+
+### 주의사항
+
+- Streamlit Cloud는 Linux 환경에서 실행되므로, HWP 파일 처리 기능이 제한적입니다.
+- 기본 텍스트 추출 및 메타데이터 분석은 가능하지만, 이미지 추출 및 고급 서식 분석은 지원되지 않습니다.
+- 전체 기능을 사용하려면 Windows 환경에서 로컬로 실행하는 것이 좋습니다. 
