@@ -39,7 +39,9 @@ try:
             font_paths = [
                 '/usr/share/fonts/truetype/nanum/NanumGothic.ttf',
                 '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',  # 대체 폰트
-                '/usr/share/fonts/TTF/DejaVuSans.ttf'  # 대체 폰트
+                '/usr/share/fonts/TTF/DejaVuSans.ttf',  # 대체 폰트
+                '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',  # 추가 대체 폰트
+                '/usr/share/fonts/truetype/freefont/FreeSans.ttf'  # 추가 대체 폰트
             ]
             
             font_registered = False
@@ -56,10 +58,12 @@ try:
             # 모든 폰트 등록 시도 실패 시 기본 폰트 사용
             if not font_registered:
                 logger.warning("모든 폰트 등록 시도 실패. 기본 폰트를 사용합니다.")
+                print("한글 폰트 등록 실패: 기본 폰트를 사용합니다.")
         
         PDF_SUPPORT = True
     except Exception as e:
         logger.warning(f"한글 폰트 등록 실패: {str(e)}. 기본 폰트를 사용합니다.")
+        print(f"한글 폰트 등록 실패: {str(e)}. 기본 폰트를 사용합니다.")
         PDF_SUPPORT = True
         
 except ImportError:

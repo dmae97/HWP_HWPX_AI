@@ -1,4 +1,27 @@
 import streamlit as st
+import platform
+import os
+from dotenv import load_dotenv
+from analyzer import ProjectAnalyzer
+from hwp_utils import HwpHandler
+from hybrid_search import HybridSearchEngine
+from hwp_to_latex import HwpToLatexConverter
+from pdf_handler import PDFHandler
+from document_handler import DocumentProcessorFactory
+import tempfile
+import pandas as pd
+import time
+import json
+from pathlib import Path
+import logging
+import requests
+import shutil
+import gc
+import base64
+from io import BytesIO
+
+# 환경 변수 로드
+load_dotenv()
 
 # Set page configuration - 반드시 다른 Streamlit 명령보다 먼저 실행
 st.set_page_config(
@@ -185,23 +208,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-import os
-from dotenv import load_dotenv
-from analyzer import ProjectAnalyzer
-from hwp_utils import HwpHandler
-from hybrid_search import HybridSearchEngine
-from hwp_to_latex import HwpToLatexConverter
-import tempfile
-import pandas as pd
-import time
-import json
-from pathlib import Path
-import logging
-import requests
-import shutil
-import gc
-import platform
-
 # 로깅 설정
 logging.basicConfig(
     level=logging.INFO,
@@ -237,6 +243,66 @@ def cached_suggest_updates(engine, hwp_content, freshness_result):
     """HybridSearchEngine.suggest_updates 메서드의 캐싱 래퍼"""
     return engine.suggest_updates(hwp_content, freshness_result)
 
+@st.cache_data(ttl=3600, show_spinner=False)
+def cached_process_pdf(pdf_handler, file_path, include_images=False, image_limit=10, image_min_size=100):
+    """
+    PDF 처리 결과를 캐싱합니다.
+    
+    Args:
+        pdf_handler: PDFHandler 인스턴스
+        file_path: PDF 파일 경로
+        include_images: 이미지 포함 여부
+        image_limit: 추출할 최대 이미지 수
+        image_min_size: 추출할 이미지의 최소 크기(픽셀)
+        
+    Returns:
+        Dict[str, Any]: 처리 결과
+    """
+    return pdf_handler.process_pdf(
+        file_path, 
+        include_images=include_images,
+        image_limit=image_limit,
+        image_min_size=image_min_size
+    )
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def cached_process_document(file_path, api_keys, include_images=False, image_limit=10, image_min_size=100, pages=None):
+    """
+    문서 처리 결과를 캐싱합니다.
+    
+    Args:
+        file_path: 문서 파일 경로
+        api_keys: API 키 딕셔너리
+        include_images: 이미지 포함 여부
+        image_limit: 추출할 최대 이미지 수
+        image_min_size: 추출할 이미지의 최소 크기(픽셀)
+        pages: 처리할 페이지 목록 (None인 경우 전체 페이지)
+        
+    Returns:
+        Dict[str, Any]: 처리 결과
+    """
+    # 파일 확장자 확인
+    file_ext = os.path.splitext(file_path)[1].lower().replace(".", "")
+    
+    # 적절한 핸들러 생성
+    handler = DocumentProcessorFactory.create_handler(
+        file_path=file_path,
+        file_type=file_ext,
+        api_keys=api_keys
+    )
+    
+    # 파일 처리
+    with open(file_path, "rb") as file_obj:
+        result = handler.process_document(
+            file_obj,
+            include_images=include_images,
+            image_limit=image_limit,
+            image_min_size=image_min_size,
+            pages=pages
+        )
+    
+    return result
+
 # Load environment variables
 load_dotenv()
 
@@ -263,8 +329,16 @@ def get_api_key(key_name, default_value=None):
     return default_value
 
 # API 키 설정
-GOOGLE_API_KEY = get_api_key("GOOGLE_API_KEY")
 PERPLEXITY_API_KEY = get_api_key("PERPLEXITY_API_KEY")
+GOOGLE_API_KEY = get_api_key("GOOGLE_API_KEY")
+MISTRAL_API_KEY = get_api_key("MISTRAL_API_KEY")
+
+# API 키 딕셔너리 생성
+api_keys = {
+    "PERPLEXITY_API_KEY": PERPLEXITY_API_KEY,
+    "GOOGLE_API_KEY": GOOGLE_API_KEY,
+    "MISTRAL_API_KEY": MISTRAL_API_KEY
+}
 
 # App title and description
 st.markdown('<p class="main-header">HWP & HWPX 파일 분석기</p>', unsafe_allow_html=True)
@@ -425,11 +499,23 @@ def test_perplexity_connection(api_key):
 def main():
     # 플랫폼 감지 및 설정
     is_windows = platform.system() == "Windows"
-    is_railway = os.environ.get("RAILWAY_STATIC_URL") is not None
+    is_streamlit_cloud = os.environ.get("STREAMLIT_RUNTIME_ENV") == "cloud"
+    
+    # 환경 변수에서 플랫폼 설정 가져오기 (Streamlit Cloud에서 설정)
+    platform_env_var = os.environ.get("PLATFORM", "").lower()
+    hwp_feature_limited_var = os.environ.get("HWP_FEATURE_LIMITED", "").lower()
+    
+    # Streamlit Secrets에서 설정 가져오기 (로컬 개발 환경에서 설정)
+    if "PLATFORM" in st.secrets:
+        platform_env_var = st.secrets["PLATFORM"].lower()
+    if "HWP_FEATURE_LIMITED" in st.secrets:
+        hwp_feature_limited_var = st.secrets["HWP_FEATURE_LIMITED"].lower()
     
     # 환경 정보 설정
-    if is_railway:
-        platform_env = "Railway (Linux)"
+    platform_features_limited = False
+    
+    if is_streamlit_cloud or platform_env_var == "linux" or hwp_feature_limited_var == "true":
+        platform_env = "Streamlit Cloud (Linux)"
         platform_features_limited = True
     elif not is_windows:
         platform_env = f"{platform.system()} (기능 제한)"
@@ -437,6 +523,25 @@ def main():
     else:
         platform_env = "Windows (모든 기능 지원)"
         platform_features_limited = False
+    
+    # API 키 설정
+    PERPLEXITY_API_KEY = get_api_key("PERPLEXITY_API_KEY")
+    GOOGLE_API_KEY = get_api_key("GOOGLE_API_KEY")
+    MISTRAL_API_KEY = get_api_key("MISTRAL_API_KEY")
+    
+    # API 키 딕셔너리 생성
+    api_keys = {
+        "PERPLEXITY_API_KEY": PERPLEXITY_API_KEY,
+        "GOOGLE_API_KEY": GOOGLE_API_KEY,
+        "MISTRAL_API_KEY": MISTRAL_API_KEY
+    }
+    
+    # 분석기 및 핸들러 초기화
+    analyzer = ProjectAnalyzer(GOOGLE_API_KEY)
+    hwp_handler = HwpHandler()
+    hybrid_search_engine = HybridSearchEngine(PERPLEXITY_API_KEY, GOOGLE_API_KEY)
+    hwp_to_latex = HwpToLatexConverter()
+    pdf_handler = PDFHandler(MISTRAL_API_KEY)
     
     # Sidebar configuration
     with st.sidebar:
@@ -523,6 +628,17 @@ def main():
                             st.session_state.perplexity_connected = False
                             st.session_state.perplexity_error = message
                             st.error(f"Perplexity API 연결 실패: {message}")
+        
+        # Mistral API 키 입력 필드 추가
+        st.markdown('<div class="sidebar-heading">Mistral API 설정</div>', unsafe_allow_html=True)
+        mistral_api_key_input = st.text_input("Mistral API 키", 
+                                            value=MISTRAL_API_KEY if MISTRAL_API_KEY else "", 
+                                            type="password",
+                                            help="Mistral AI API 키를 입력하세요. PDF OCR 기능을 사용하려면 필요합니다.")
+        
+        if mistral_api_key_input and mistral_api_key_input != MISTRAL_API_KEY:
+            MISTRAL_API_KEY = mistral_api_key_input
+            st.session_state["mistral_api_key"] = MISTRAL_API_KEY
         
         # 분석 설정 섹션 추가
         st.markdown('<div class="sidebar-heading">분석 설정</div>', unsafe_allow_html=True)
@@ -642,14 +758,19 @@ def main():
         analyzer = None
         hybrid_search = None
     
+    # 분석기 초기화
+    pdf_handler = PDFHandler(MISTRAL_API_KEY) if MISTRAL_API_KEY else None
+    
     # Main content area
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "파일 분석", 
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+        "파일 업로드 및 분석", 
         "데이터 추출", 
-        "문서 변환",
-        "문서 비교",
-        "질의응답",
-        "최신성 검사"
+        "문서 변환", 
+        "문서 비교", 
+        "질의응답", 
+        "최신성 평가",
+        "PDF 문서 분석",
+        "HWP/HWPX 문서 분석"
     ])
     
     with tab1:
@@ -1481,6 +1602,335 @@ def main():
                         except Exception as e:
                             st.error(f"결과 저장 중 오류가 발생했습니다: {str(e)}")
                             logging.error(f"결과 저장 오류: {str(e)}")
+
+    # PDF 분석 탭
+    with tab7:
+        st.markdown('<h2 class="main-header">PDF 문서 분석</h2>', unsafe_allow_html=True)
+        
+        if not MISTRAL_API_KEY:
+            st.warning("PDF 분석을 위해 Mistral API 키가 필요합니다. 사이드바에서 API 키를 설정해주세요.")
+        else:
+            st.markdown("""
+            <div class="info-box">
+            PDF 문서를 업로드하여 OCR 처리 후 텍스트를 추출하고 분석할 수 있습니다.
+            Mistral AI의 OCR API를 활용하여 고품질의 텍스트 추출 및 문서 구조 분석이 가능합니다.
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # PDF 파일 업로드
+            uploaded_pdf = st.file_uploader("PDF 파일 업로드", type=["pdf"], key="pdf_uploader")
+            
+            # 옵션 설정
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                include_images = st.checkbox("이미지 추출 포함", value=False, 
+                                           help="PDF에서 이미지를 추출합니다. 파일 크기가 커질 수 있습니다.")
+                
+                image_limit = st.slider("최대 이미지 수", min_value=1, max_value=50, value=10,
+                                      help="추출할 최대 이미지 수를 설정합니다.")
+            
+            with col2:
+                use_page_range = st.checkbox("페이지 범위 지정", value=False,
+                                           help="처리할 특정 페이지 범위를 지정합니다. 페이지 번호는 0부터 시작합니다.")
+                
+                page_range = st.text_input("페이지 범위", value="0-5",
+                                         help="예: '0-5,7,9-12' (0부터 시작, 쉼표로 구분, 하이픈으로 범위 지정)")
+                
+                image_min_size = st.slider("최소 이미지 크기", min_value=10, max_value=500, value=100,
+                                         help="추출할 이미지의 최소 크기(픽셀)를 설정합니다.")
+            
+            if uploaded_pdf is not None:
+                # 임시 파일로 저장
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                    tmp_file.write(uploaded_pdf.getvalue())
+                    pdf_path = tmp_file.name
+                
+                # 처리 버튼
+                if st.button("PDF 분석 시작", key="process_pdf_btn"):
+                    with st.spinner("PDF 문서를 분석 중입니다..."):
+                        # 페이지 범위 파싱
+                        pages = None
+                        if use_page_range:
+                            # PDFHandler 클래스의 _parse_page_ranges 메서드 활용
+                            temp_handler = PDFHandler(MISTRAL_API_KEY)
+                            pages = temp_handler._parse_page_ranges(page_range)
+                        
+                        # 새로운 하이브리드 문서 처리 방식 사용
+                        pdf_result = cached_process_document(
+                            pdf_path,
+                            api_keys,
+                            include_images=include_images,
+                            image_limit=image_limit,
+                            image_min_size=image_min_size,
+                            pages=pages
+                        )
+                        
+                        # 세션 상태에 결과 저장
+                        st.session_state["pdf_result"] = pdf_result
+                        
+                        # 처리 완료 메시지
+                        if "error" in pdf_result and pdf_result["error"]:
+                            st.error(f"PDF 처리 중 오류가 발생했습니다: {pdf_result['error']}")
+                        else:
+                            st.success(f"PDF 분석이 완료되었습니다. {pdf_result['metadata']['page_count']}페이지가 처리되었습니다.")
+                
+                # 분석 결과 표시
+                if "pdf_result" in st.session_state:
+                    pdf_result = st.session_state["pdf_result"]
+                    
+                    # 결과 탭
+                    pdf_result_tabs = st.tabs(["텍스트", "마크다운", "이미지", "표", "메타데이터"])
+                    
+                    # 텍스트 탭
+                    with pdf_result_tabs[0]:
+                        st.markdown('<h3 class="sub-header">추출된 텍스트</h3>', unsafe_allow_html=True)
+                        st.text_area("텍스트 내용", pdf_result["text"], height=400)
+                        
+                        # 텍스트 다운로드 버튼
+                        if pdf_result["text"]:
+                            text_bytes = pdf_result["text"].encode()
+                            st.download_button(
+                                label="텍스트 다운로드",
+                                data=text_bytes,
+                                file_name=f"{uploaded_pdf.name.split('.')[0]}_text.txt",
+                                mime="text/plain"
+                            )
+                    
+                    # 마크다운 탭
+                    with pdf_result_tabs[1]:
+                        st.markdown('<h3 class="sub-header">마크다운 형식</h3>', unsafe_allow_html=True)
+                        st.markdown(pdf_result["markdown"])
+                        
+                        # 마크다운 다운로드 버튼
+                        if pdf_result["markdown"]:
+                            md_bytes = pdf_result["markdown"].encode()
+                            st.download_button(
+                                label="마크다운 다운로드",
+                                data=md_bytes,
+                                file_name=f"{uploaded_pdf.name.split('.')[0]}_markdown.md",
+                                mime="text/markdown"
+                            )
+                    
+                    # 이미지 탭
+                    with pdf_result_tabs[2]:
+                        st.markdown('<h3 class="sub-header">추출된 이미지</h3>', unsafe_allow_html=True)
+                        
+                        if include_images and pdf_result["images"]:
+                            # 이미지 표시
+                            for i, img in enumerate(pdf_result["images"]):
+                                if "image_base64" in img and img["image_base64"]:
+                                    st.image(
+                                        f"data:image/png;base64,{img['image_base64']}",
+                                        caption=f"이미지 {i+1} (페이지 {img.get('page', 0)+1})",
+                                        use_column_width=True
+                                    )
+                                    
+                                    # 이미지 위치 정보 표시
+                                    with st.expander(f"이미지 {i+1} 위치 정보"):
+                                        location_info = {
+                                            "페이지": img.get("page", 0) + 1,
+                                            "좌상단 X": img.get("top_left_x", 0),
+                                            "좌상단 Y": img.get("top_left_y", 0),
+                                            "우하단 X": img.get("bottom_right_x", 0),
+                                            "우하단 Y": img.get("bottom_right_y", 0)
+                                        }
+                                        st.json(location_info)
+                        else:
+                            st.info("이미지 추출이 활성화되지 않았거나 추출된 이미지가 없습니다.")
+                    
+                    # 표 탭
+                    with pdf_result_tabs[3]:
+                        st.markdown('<h3 class="sub-header">추출된 표</h3>', unsafe_allow_html=True)
+                        
+                        # 마크다운에서 표 추출
+                        tables = pdf_handler.extract_tables_from_markdown(pdf_result["markdown"])
+                        
+                        if tables:
+                            for i, table in enumerate(tables):
+                                st.markdown(f"#### 표 {i+1}")
+                                
+                                # 표를 DataFrame으로 변환
+                                df = pdf_handler.convert_to_pandas(table)
+                                if df is not None:
+                                    st.dataframe(df)
+                                    
+                                    # CSV 다운로드 버튼
+                                    csv = df.to_csv(index=False).encode('utf-8')
+                                    st.download_button(
+                                        label=f"표 {i+1} CSV 다운로드",
+                                        data=csv,
+                                        file_name=f"{uploaded_pdf.name.split('.')[0]}_table_{i+1}.csv",
+                                        mime="text/csv"
+                                    )
+                                else:
+                                    st.markdown(table["markdown"])
+                        else:
+                            st.info("추출된 표가 없습니다.")
+                    
+                    # 메타데이터 탭
+                    with pdf_result_tabs[4]:
+                        st.markdown('<h3 class="sub-header">문서 메타데이터</h3>', unsafe_allow_html=True)
+                        
+                        # 메타데이터 표시
+                        st.json(pdf_result["metadata"])
+                        
+                        # 페이지 차원 정보가 있는 경우 시각화
+                        if "page_dimensions" in pdf_result["metadata"]:
+                            st.markdown("#### 페이지 차원 정보")
+                            
+                            # 페이지 차원 정보를 DataFrame으로 변환
+                            dimensions_data = []
+                            for page_dim in pdf_result["metadata"]["page_dimensions"]:
+                                page_num = page_dim["page"] + 1
+                                dim = page_dim["dimensions"]
+                                dimensions_data.append({
+                                    "페이지": page_num,
+                                    "너비(px)": dim.get("width", 0),
+                                    "높이(px)": dim.get("height", 0),
+                                    "DPI": dim.get("dpi", 0)
+                                })
+                            
+                            if dimensions_data:
+                                st.dataframe(pd.DataFrame(dimensions_data))
+                
+                # 임시 파일 삭제
+                try:
+                    os.unlink(pdf_path)
+                except:
+                    pass
+
+    # HWP/HWPX 파일 업로드 및 분석 탭
+    with tab8:
+        st.markdown('<h2 class="main-header">HWP/HWPX 문서 분석</h2>', unsafe_allow_html=True)
+        
+        if not MISTRAL_API_KEY:
+            st.warning("HWP/HWPX 분석을 위해 Mistral API 키가 필요합니다. 사이드바에서 API 키를 설정해주세요.")
+        else:
+            st.markdown("""
+            <div class="info-box">
+            HWP/HWPX 문서를 업로드하여 OCR 처리 후 텍스트를 추출하고 분석할 수 있습니다.
+            Mistral AI의 OCR API를 활용하여 고품질의 텍스트 추출 및 문서 구조 분석이 가능합니다.
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # HWP/HWPX 파일 업로드
+            uploaded_hwp = st.file_uploader("HWP/HWPX 파일 업로드", type=["hwp", "hwpx"], key="hwp_uploader")
+            
+            # 옵션 설정
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                include_images = st.checkbox("이미지 추출 포함", value=False, 
+                                           help="문서에서 이미지를 추출합니다. 파일 크기가 커질 수 있습니다.",
+                                           key="hwp_include_images")
+                
+                image_limit = st.slider("최대 이미지 수", min_value=1, max_value=50, value=10,
+                                      help="추출할 최대 이미지 수를 설정합니다.",
+                                      key="hwp_image_limit")
+            
+            with col2:
+                image_min_size = st.slider("최소 이미지 크기", min_value=10, max_value=500, value=100,
+                                         help="추출할 이미지의 최소 크기(픽셀)를 설정합니다.",
+                                         key="hwp_image_min_size")
+                
+                use_native = st.checkbox("가능한 경우 네이티브 처리 사용", value=True,
+                                       help="Windows 환경에서는 네이티브 라이브러리를 사용하여 처리합니다.",
+                                       key="hwp_use_native")
+            
+            if uploaded_hwp is not None:
+                # 임시 파일로 저장
+                with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded_hwp.name)[1]) as tmp_file:
+                    tmp_file.write(uploaded_hwp.getvalue())
+                    hwp_path = tmp_file.name
+                
+                # 처리 버튼
+                if st.button("HWP/HWPX 분석 시작", key="process_hwp_btn"):
+                    with st.spinner("HWP/HWPX 문서를 분석 중입니다..."):
+                        # 새로운 하이브리드 문서 처리 방식 사용
+                        hwp_result = cached_process_document(
+                            hwp_path,
+                            api_keys,
+                            include_images=include_images,
+                            image_limit=image_limit,
+                            image_min_size=image_min_size
+                        )
+                        
+                        # 세션 상태에 결과 저장
+                        st.session_state["hwp_result"] = hwp_result
+                        
+                        # 처리 완료 메시지
+                        if "error" in hwp_result and hwp_result["error"]:
+                            st.error(f"HWP/HWPX 처리 중 오류가 발생했습니다: {hwp_result['error']}")
+                        else:
+                            st.success(f"HWP/HWPX 분석이 완료되었습니다.")
+                
+                # 분석 결과 표시
+                if "hwp_result" in st.session_state:
+                    hwp_result = st.session_state["hwp_result"]
+                    
+                    # 결과 탭
+                    hwp_result_tabs = st.tabs(["텍스트", "표", "이미지", "메타데이터"])
+                    
+                    # 텍스트 탭
+                    with hwp_result_tabs[0]:
+                        st.markdown('<h3 class="sub-header">추출된 텍스트</h3>', unsafe_allow_html=True)
+                        st.text_area("텍스트 내용", hwp_result.get("text", ""), height=400)
+                        
+                        # 텍스트 다운로드 버튼
+                        if hwp_result.get("text"):
+                            text_bytes = hwp_result["text"].encode()
+                            st.download_button(
+                                label="텍스트 다운로드",
+                                data=text_bytes,
+                                file_name=f"{uploaded_hwp.name.split('.')[0]}_text.txt",
+                                mime="text/plain"
+                            )
+                    
+                    # 표 탭
+                    with hwp_result_tabs[1]:
+                        st.markdown('<h3 class="sub-header">추출된 표</h3>', unsafe_allow_html=True)
+                        
+                        tables = hwp_result.get("tables", [])
+                        if tables:
+                            for i, table in enumerate(tables):
+                                st.markdown(f"**표 {i+1}**")
+                                st.dataframe(table)
+                                
+                                # CSV 다운로드 버튼
+                                csv_data = pd.DataFrame(table).to_csv(index=False).encode()
+                                st.download_button(
+                                    label=f"표 {i+1} CSV 다운로드",
+                                    data=csv_data,
+                                    file_name=f"{uploaded_hwp.name.split('.')[0]}_table_{i+1}.csv",
+                                    mime="text/csv"
+                                )
+                        else:
+                            st.info("추출된 표가 없습니다.")
+                    
+                    # 이미지 탭
+                    with hwp_result_tabs[2]:
+                        st.markdown('<h3 class="sub-header">추출된 이미지</h3>', unsafe_allow_html=True)
+                        
+                        images = hwp_result.get("images", [])
+                        if images:
+                            for i, img_bytes in enumerate(images):
+                                st.image(img_bytes, caption=f"이미지 {i+1}")
+                                
+                                # 이미지 다운로드 버튼
+                                st.download_button(
+                                    label=f"이미지 {i+1} 다운로드",
+                                    data=img_bytes,
+                                    file_name=f"{uploaded_hwp.name.split('.')[0]}_image_{i+1}.png",
+                                    mime="image/png"
+                                )
+                        else:
+                            st.info("추출된 이미지가 없습니다.")
+                    
+                    # 메타데이터 탭
+                    with hwp_result_tabs[3]:
+                        st.markdown('<h3 class="sub-header">문서 메타데이터</h3>', unsafe_allow_html=True)
+                        st.json(hwp_result.get("metadata", {}))
 
 if __name__ == "__main__":
     main()
