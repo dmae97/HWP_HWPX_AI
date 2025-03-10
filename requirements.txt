@@ -1,25 +1,26 @@
 streamlit==1.43.0
 python-dotenv==1.0.0
-pandas>=2.0.0
-requests>=2.0.0
+pandas==2.0.3
+requests==2.31.0
 olefile==0.46
 langchain==0.3.19
-langchain-core>=0.3.35
-langchain-text-splitters>=0.3.6
+langchain-core==0.3.35
+langchain-text-splitters==0.3.6
 google-generativeai==0.3.1
 google-ai-generativelanguage==0.4.0
-numpy>=1.26.0
-pillow>=10.0.0
-tqdm>=4.60.0
-matplotlib>=3.9.0
-scikit-learn>=1.5.0
-diskcache>=5.6.0
+numpy==1.26.3
+pillow==10.2.0
+tqdm==4.66.2
+matplotlib==3.9.0
+scikit-learn==1.5.0
+diskcache==5.6.3
 reportlab==4.3.1
-mistralai==0.1.5  # Mistral AI API 클라이언트
-fastapi==0.110.0  # FastAPI 프레임워크
-uvicorn==0.27.1   # ASGI 서버
-python-multipart==0.0.9  # 파일 업로드 처리
-# Windows-only dependencies are commented out and will be conditionally imported in the code
-# pywin32==308; platform_system == "Windows"
-# pyhwpx==0.44.1; platform_system == "Windows"
-# pyhwp==0.1b9; platform_system != "Windows" 
+mistralai==0.1.5
+fastapi==0.110.0
+uvicorn==0.27.1
+python-multipart==0.0.9
+# Windows-specific dependencies with platform check
+pywin32==308; platform_system=="Windows"
+pyhwpx==0.44.1; platform_system=="Windows"
+# Non-Windows dependencies
+pyhwp==0.1b9; platform_system!="Windows" 

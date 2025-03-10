@@ -21,3 +21,7 @@
 2025-03-05 07:18:13,125 - run - WARNING - ´ÙÀ½ ÆĞÅ°Áö°¡ ¼³Ä¡µÇ¾î ÀÖÁö ¾Ê½À´Ï´Ù: langchain-google-genai, python-dotenv, google-generativeai, pywin32
 2025-03-05 07:18:26,080 - run - INFO - ÆĞÅ°Áö ¼³Ä¡°¡ ¿Ï·áµÇ¾ú½À´Ï´Ù.
 2025-03-05 07:18:27,083 - run - INFO - ¾ÖÇÃ¸®ÄÉÀÌ¼ÇÀ» ½ÃÀÛÇÕ´Ï´Ù...
+2025-03-10 09:14:58,231 - run - ERROR - ÇÊ¿äÇÑ ÆĞÅ°Áö°¡ ¼³Ä¡µÇ¾î ÀÖÁö ¾Ê½À´Ï´Ù: No module named 'fastapi'
+2025-03-10 09:14:58,233 - run - INFO - pip install -r requirements.txt ¸í·ÉÀ¸·Î ÇÊ¿äÇÑ ÆĞÅ°Áö¸¦ ¼³Ä¡ÇÏ¼¼¿ä.
+2025-03-10 09:21:25,394 - run - ERROR - í•„ìš”í•œ íŒ¨í‚¤ì§€ê°€ ì„¤ì¹˜ë˜ì–´ ìˆì§€ ì•ŠìŠµë‹ˆë‹¤: No module named 'fastapi'
+2025-03-10 09:21:25,394 - run - INFO - pip install -r requirements.txt ëª…ë ¹ìœ¼ë¡œ í•„ìš”í•œ íŒ¨í‚¤ì§€ë¥¼ ì„¤ì¹˜í•˜ì„¸ìš”.
